@@ -20,7 +20,7 @@ conntrack-logger is configured with a json file you specify with the -config fla
 
 `conntrack-logger -config yourstuff.json`
 
-Sample config file id ditributed with source code, see conntrack-logger.cfg.
+Sample config file is ditributed with source code, see conntrack-logger.cfg.
 
 It it almost self descriptive, as only database connection details are configured. 
 The CommitCount parameter controls size of a single batch.
@@ -33,7 +33,7 @@ The CommitCount parameter controls size of a single batch.
 
 3. Install libnetfilter-conntrack-dev and libnfnetlink-dev
 
-4. Compile logstash-forwarder
+4. Compile conntrack-logger
 
         git clone git://github.com/akashihi/conntrack-logger.git
         cd conntrack-logger
@@ -68,4 +68,4 @@ You will also need to install PostgreSQL server, create database, user and table
 
 See LICENSE file.
 
-Copyright 2012-2013 Jordan Sissel and contributors
+Copyright 2015 Denis V Chapligin <akashihi@gmail.com>
