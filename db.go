@@ -7,6 +7,10 @@ import (
     "time"
 )
 
+const (
+    PURGE_PERIOD = 24
+)
+
 type FlowRecord struct {
     TS       time.Time
     Proto    string
@@ -69,3 +73,23 @@ func writeDB(configuration Configuration, flows <-chan FlowRecord) {
 	}
     }
 }
+
+func purgeDB(configuration Configuration) {
+    connect_string := "host="+configuration.DBhost+" port="+configuration.DBport+" user="+configuration.DBuser+" password="+configuration.DBpassword+" dbname="+configuration.DBname+" sslmode=disable"
+    
+    ticker := time.NewTicker(time.Hour * PURGE_PERIOD)
+
+    for t := range ticker.C {
+	log.Print("Purging database at %v", t)
+	db, err := sql.Open("postgres", connect_string)
+	if err != nil {
+    	    log.Fatal(err)
+            break
+	}
+
+	db.Exec("delete from events where ts < (now() - interval '1 month')")
+	println("purge")
+	db.Close()
+    }
+}
+

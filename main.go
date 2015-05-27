@@ -59,12 +59,17 @@ func main() {
   go parseNF(xml_messages, flow_messages)
   go writeDB(configuration, flow_messages)
 
+  //Start puring
+  go purgeDB(configuration)
+
+  //Connect to Netlink
   ct_handle, err := C.nfct_open(NFNL_SUBSYS_CTNETLINK, NF_NETLINK_CONNTRACK_NEW)
   if ct_handle == nil {
     panic(err)
   }
   defer C.nfct_close(ct_handle)
 
+  //Stop netlink on signal
   sigs := make(chan os.Signal, 1)
   signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
   go func() {
@@ -74,10 +79,13 @@ func main() {
 	os.Exit(0)
   }()
 
+  //Increase bufffer
   bsize := C.nfnl_rcvbufsiz(C.nfct_nfnlh(ct_handle), CT_BUFF_SIZE);
   log.Print("Netlink buffer set to: ", bsize)
 
+  //Link netlink and processing function
   C.nfct_callback_register(ct_handle, NFCT_T_NEW, (C.cb)(unsafe.Pointer(C.event_cb_cgo)), nil);
 
+  //Start even processing!
   C.nfct_catch(ct_handle)
 }
