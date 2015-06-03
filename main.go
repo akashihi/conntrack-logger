@@ -74,10 +74,12 @@ func main() {
   configuration := config()
 
   //Start parsing and database writing
-  go parseNF(xml_messages, flow_messages)
-  go writeDB(configuration, flow_messages)
+  for w := 1; w <= configuration.Workers; w++ {
+      go parseNF(xml_messages, flow_messages)
+      go writeDB(configuration, flow_messages)
+  }
 
-  //Start puring
+  //Start purging
   go purgeDB(configuration)
 
   //Connect to Netlink
@@ -103,7 +105,13 @@ func main() {
 
   //Link netlink and processing function
   C.nfct_callback_register(ct_handle, NFCT_T_NEW, (C.cb)(unsafe.Pointer(C.event_cb_cgo)), nil);
+  log.Print("Netlink callback installed")
 
   //Start even processing!
-  C.nfct_catch(ct_handle)
+
+  status, err := C.nfct_catch(ct_handle)
+  if status == -1 {
+    log.Print(err)
+  }
+  
 }

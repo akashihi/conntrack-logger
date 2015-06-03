@@ -87,7 +87,7 @@ func parseNF(messages <-chan []byte, flows chan<- FlowRecord) {
 	var flow NFlow
         err := xml.Unmarshal(m, &flow)
 	if err != nil {
-	    log.Fatal(err)
+	    log.Print(err)
             continue
         }
 

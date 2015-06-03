@@ -23,7 +23,10 @@ conntrack-logger is configured with a json file you specify with the -config fla
 Sample config file is ditributed with source code, see conntrack-logger.cfg.
 
 It it almost self descriptive, as only database connection details are configured. 
+
 The CommitCount parameter controls size of a single batch.
+
+The Workers parameter controls how many processing goroutines will be running.
 
 ## Building it
 

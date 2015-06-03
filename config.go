@@ -26,6 +26,7 @@ import (
 )
 
 type Configuration struct {
+    Workers     int
     CommitCount int
     DBhost      string
     DBport      string

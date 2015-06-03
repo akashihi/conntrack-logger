@@ -47,26 +47,26 @@ func writeDB(configuration Configuration, flows <-chan FlowRecord) {
 	defer db.Close()
 
 	if err != nil {
-    	    log.Fatal(err)
+    	    log.Print(err)
             time.Sleep(10000 * time.Millisecond) //Wait 10 seconds before reconnect
             continue
 	}
+	log.Print("Connection to database established: "+configuration.DBhost)
 
 	for {
 	    counter := 0
 
 	    tx, err := db.Begin()
 	    if err != nil {
-		log.Fatal(err)
+		log.Print(err)
                 time.Sleep(10000 * time.Millisecond) //Wait 10 seconds before reconnect
 		break
 	    }
 
 	    insert_query, err := tx.Prepare("insert into events (ts, proto, src, dst, sport, dport) values ($1, $2, $3, $4, $5, $6)")
-	    defer insert_query.Close()
 
 	    if err != nil {
-		log.Fatal(err)
+		log.Print(err)
         	time.Sleep(10000 * time.Millisecond) //Wait 10 seconds before reconnect
         	break
     	    }
@@ -77,14 +77,16 @@ func writeDB(configuration Configuration, flows <-chan FlowRecord) {
 		_, err = insert_query.Exec(f.TS, f.Proto, f.Src, f.Dst, f.Sport, f.Dport)
 
 	        if err != nil {
-    		    log.Fatal(err)
+    		    log.Print(err)
         	    break
 	        }
 		counter++
     	    }
+	    insert_query.Close()
+
 	    err = tx.Commit()
 	    if err != nil {
-		log.Fatal(err)
+		log.Print(err)
                 time.Sleep(10000 * time.Millisecond) //Wait 10 seconds before reconnect
 		break
 	    }
@@ -101,7 +103,7 @@ func purgeDB(configuration Configuration) {
 	log.Print("Purging database at %v", t)
 	db, err := sql.Open("postgres", connect_string)
 	if err != nil {
-    	    log.Fatal(err)
+    	    log.Print(err)
             break
 	}
 
