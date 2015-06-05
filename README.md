@@ -8,12 +8,6 @@ As it was written for solving private particular task, lot of stuff is hardcoded
 
 That was my first expirience with Go, so don't expect it to be coded in a good way.
 
-### Internals
-
-It directly uses libnetlink/libnetfilter for conntrack events processing. As those libraries
-do not provide any ways to directly parse nf events, events are converted into xml form by library call
-and the parsed on the go side.
-
 ## Configuring
 
 conntrack-logger is configured with a json file you specify with the -config flag:

@@ -38,6 +38,12 @@ import(
     "os/signal"
     "syscall"
     "unsafe"
+    "time"
+    "net"
+    "errors"
+    "encoding/binary"
+    "bytes"
+    "github.com/davecheney/profile"
 )
 
 const (
@@ -48,22 +54,77 @@ const (
     NFCT_T_NEW = 1
 )
 
-var xml_messages  = make(chan []byte, 128)
 var flow_messages = make(chan FlowRecord, 128)
+
+func nfct_get_ip(ct *C.struct_nf_conntrack, attr uint32) (string, error) {
+ if C.nfct_attr_is_set(ct, attr)>0 {
+    var ipbuf *uint32
+    ipbuf =  (*uint32)(C.nfct_get_attr(ct, attr))
+    return net.IPv4(byte(*ipbuf), byte(*ipbuf>>8), byte(*ipbuf>>16), byte(*ipbuf>>24)).String(), nil
+ }
+ return "", errors.New("No such attribute")
+}
+
+func nfct_get_port(ct *C.struct_nf_conntrack, attr uint32) (int, error) {
+ if C.nfct_attr_is_set(ct, attr)>0 {
+    var portbuf *uint16
+    portbuf = (*uint16)(C.nfct_get_attr(ct, attr))
+
+    buf := new(bytes.Buffer)
+    binary.Write(buf, binary.BigEndian, *portbuf)
+    binary.Read(buf, binary.LittleEndian, portbuf)
+    return (int)(*portbuf), nil
+ }
+ return 0, errors.New("No such attribute")
+}
+
+func nfct_get_proto(ct *C.struct_nf_conntrack) (string, error) {
+ if C.nfct_attr_is_set(ct, C.ATTR_ORIG_L4PROTO)>0 {
+    var protobuf *uint8
+    protobuf =  (*uint8)(C.nfct_get_attr(ct, C.ATTR_ORIG_L4PROTO))
+    return IANAProtocols[*protobuf], nil
+ }
+ return "", errors.New("No such attribute")
+}
 
 //export event_cb
 func event_cb(t C.int, ct *C.struct_nf_conntrack) C.int {
-  b := make([]byte, 1024)
+  result := FlowRecord { 
+    TS : time.Now(),
+  }
+  var err error
 
-  C.nfct_snprintf((*C.char)(unsafe.Pointer(&b[0])), 1024, ct, NFCT_T_NEW, 1, 0)
+  result.Src, err = nfct_get_ip(ct, C.ATTR_IPV4_SRC)
+  if (err != nil) {
+    //handle v6
+  }
+  result.Dst, err = nfct_get_ip(ct, C.ATTR_IPV4_DST)
+  if (err != nil) {
+    //handle v6
+  }  
 
-  //At this stage we have XML structure in the b
-  xml_messages <- b
+  result.Sport,err = nfct_get_port(ct, C.ATTR_PORT_SRC); 
+  if err!= nil {
+	//Don't know how to handle connections without port
+        return NFCT_CB_CONTINUE
+  }
+  result.Dport,err = nfct_get_port(ct, C.ATTR_PORT_DST); 
+  if err!= nil {
+	//Don't know how to handle connections without port
+        return NFCT_CB_CONTINUE
+  }
+  result.Proto, err = nfct_get_proto(ct)
+  if err!= nil {
+	result.Proto = "err" //At least we will know, that it happened
+  }
+
+  flow_messages <- result    
 
   return NFCT_CB_CONTINUE
 }
 
 func main() {
+  defer profile.Start(profile.CPUProfile).Stop()
   //Prepare logging
   logwriter, e := syslog.New(syslog.LOG_NOTICE, "conntrack-logger")
   if e == nil {
@@ -75,7 +136,6 @@ func main() {
 
   //Start parsing and database writing
   for w := 1; w <= configuration.Workers; w++ {
-      go parseNF(xml_messages, flow_messages)
       go writeDB(configuration, flow_messages)
   }
 
