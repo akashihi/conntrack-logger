@@ -28,6 +28,7 @@ import (
 type Configuration struct {
     Workers     int
     CommitCount int
+    Mark        uint32
     DBhost      string
     DBport      string
     DBuser      string

@@ -18,9 +18,12 @@ Sample config file is ditributed with source code, see conntrack-logger.cfg.
 
 It it almost self descriptive, as only database connection details are configured. 
 
-The CommitCount parameter controls size of a single batch.
+* The CommitCount parameter controls size of a single batch.
 
-The Workers parameter controls how many processing goroutines will be running.
+* The Workers parameter controls how many processing goroutines will be running.
+
+* The Mark parameter will enable event filtering on their CONNMARK value. 
+It is optional and when it is not set or set to 0, all events will be processed.
 
 ## Building it
 
