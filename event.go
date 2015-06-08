@@ -21,8 +21,8 @@ package main
 /*
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <errno.h>
-
-#cgo LDFLAGS: -lnetfilter_conntrack -lnfnetlink
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 typedef int (*cb)(enum nf_conntrack_msg_type type,
                                             struct nf_conntrack *ct,
@@ -50,11 +50,14 @@ func nfct_check_mark(ct *C.struct_nf_conntrack, mark uint32) (bool) {
  return false
 }
 
-func nfct_get_ip(ct *C.struct_nf_conntrack, attr uint32) (string, error) {
- if C.nfct_attr_is_set(ct, attr)>0 {
+func nfct_get_ip(ct *C.struct_nf_conntrack, attr4 uint32, attr6 uint32) (string, error) {
+ if C.nfct_attr_is_set(ct, attr4)>0 {
     var ipbuf *uint32
-    ipbuf =  (*uint32)(C.nfct_get_attr(ct, attr))
+    ipbuf =  (*uint32)(C.nfct_get_attr(ct, attr4))
     return net.IPv4(byte(*ipbuf), byte(*ipbuf>>8), byte(*ipbuf>>16), byte(*ipbuf>>24)).String(), nil
+ }
+ if C.nfct_attr_is_set(ct, attr6)>0 {
+     return "", errors.New("Not implemented")
  }
  return "", errors.New("No such attribute")
 }
@@ -85,7 +88,7 @@ func nfct_get_proto(ct *C.struct_nf_conntrack) (string, error) {
 func event_cb(t C.int, ct *C.struct_nf_conntrack) C.int {
   if configuration.Mark != 0 {
       if !nfct_check_mark(ct, configuration.Mark) {
-	    return NFCT_CB_CONTINUE
+	    return C.NFCT_CB_CONTINUE
       }
   }
 
@@ -94,24 +97,26 @@ func event_cb(t C.int, ct *C.struct_nf_conntrack) C.int {
   }
   var err error
 
-  result.Src, err = nfct_get_ip(ct, C.ATTR_IPV4_SRC)
+  result.Src, err = nfct_get_ip(ct, C.ATTR_IPV4_SRC, C.ATTR_IPV6_SRC)
   if (err != nil) {
-    //handle v6
+    //Don't know how to handle connections without address
+    return C.NFCT_CB_CONTINUE
   }
-  result.Dst, err = nfct_get_ip(ct, C.ATTR_IPV4_DST)
+  result.Dst, err = nfct_get_ip(ct, C.ATTR_IPV4_DST, C.ATTR_IPV6_DST)
   if (err != nil) {
-    //handle v6
+    //Don't know how to handle connections without address
+    return C.NFCT_CB_CONTINUE
   }  
 
   result.Sport,err = nfct_get_port(ct, C.ATTR_PORT_SRC); 
   if err!= nil {
 	//Don't know how to handle connections without port
-        return NFCT_CB_CONTINUE
+        return C.NFCT_CB_CONTINUE
   }
   result.Dport,err = nfct_get_port(ct, C.ATTR_PORT_DST); 
   if err!= nil {
 	//Don't know how to handle connections without port
-        return NFCT_CB_CONTINUE
+        return C.NFCT_CB_CONTINUE
   }
   result.Proto, err = nfct_get_proto(ct)
   if err!= nil {
@@ -120,5 +125,5 @@ func event_cb(t C.int, ct *C.struct_nf_conntrack) C.int {
 
   flow_messages <- result    
 
-  return NFCT_CB_CONTINUE
+  return C.NFCT_CB_CONTINUE
 }

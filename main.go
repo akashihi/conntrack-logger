@@ -41,11 +41,7 @@ import(
 )
 
 const (
-    NF_NETLINK_CONNTRACK_NEW = 0x00000001
-    NFNL_SUBSYS_CTNETLINK = 1
     CT_BUFF_SIZE = 8388608
-    NFCT_CB_CONTINUE = 1
-    NFCT_T_NEW = 1
 )
 
 var configuration Configuration
@@ -69,7 +65,7 @@ func main() {
   go purgeDB(configuration)
 
   //Connect to Netlink
-  ct_handle, err := C.nfct_open(NFNL_SUBSYS_CTNETLINK, NF_NETLINK_CONNTRACK_NEW)
+  ct_handle, err := C.nfct_open(C.NFNL_SUBSYS_CTNETLINK, C.NF_NETLINK_CONNTRACK_NEW)
   if ct_handle == nil {
     panic(err)
   }
@@ -90,7 +86,7 @@ func main() {
   log.Print("Netlink buffer set to: ", bsize)
 
   //Link netlink and processing function
-  C.nfct_callback_register(ct_handle, NFCT_T_NEW, (C.cb)(unsafe.Pointer(C.event_cb_cgo)), nil);
+  C.nfct_callback_register(ct_handle, C.NFCT_T_NEW, (C.cb)(unsafe.Pointer(C.event_cb_cgo)), nil);
   log.Print("Netlink callback installed")
 
   //Start even processing!
