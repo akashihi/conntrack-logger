@@ -61,9 +61,6 @@ func main() {
       go writeDB(configuration, flow_messages)
   }
 
-  //Start purging
-  go purgeDB(configuration)
-
   //Connect to Netlink
   ct_handle, err := C.nfct_open(C.NFNL_SUBSYS_CTNETLINK, C.NF_NETLINK_CONNTRACK_NEW)
   if ct_handle == nil {
